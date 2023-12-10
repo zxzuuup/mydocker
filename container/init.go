@@ -14,12 +14,24 @@ import (
 使用mount先去挂载proc文件系统，以便后面通过ps等系统命令去查看当前进程资源的情况。
 */
 func RunContainerInitProcess(command string, args []string) error {
-	log.Infof("command:%s", command)
-	defaultMountFlags := syscall.MS_NOEXEC | syscall.MS_NOSUID | syscall.MS_NODEV
-	_ = syscall.Mount("proc", "/proc", "proc", uintptr(defaultMountFlags), "")
-	argv := []string{command}
-	if err := syscall.Exec(command, argv, os.Environ()); err != nil {
-		log.Errorf(err.Error())
+	log.Infof(" RunContainerInitProcess command %s", command)
+
+	// systemd 加入linux之后，mount namespace就变成 shared by default, 苏哟i必须显示申明
+	// 要这个心的mount namespace独立。
+	if err := syscall.Mount("", "/", "", syscall.MS_PRIVATE|syscall.MS_REC, ""); err != nil {
+		log.Errorf("mount / fails: %v", err)
+		return err
 	}
+
+	defaultMountFlags := syscall.MS_NOEXEC | syscall.MS_NOSUID | syscall.MS_NODEV
+
+	// mount proc filesystem
+	syscall.Mount("proc", "/proc", "proc", uintptr(defaultMountFlags), "")
+	argv := []string{command}
+
+	if err := syscall.Exec(command, argv, os.Environ()); err != nil {
+		log.Errorf("mount /proc fails: %v", err)
+	}
+
 	return nil
 }

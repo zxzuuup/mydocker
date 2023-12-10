@@ -1,6 +1,7 @@
 package container
 
 import (
+	log "github.com/sirupsen/logrus"
 	"os"
 	"os/exec"
 	"syscall"
@@ -19,6 +20,8 @@ exec 其实就是自己调用了自己，使用这种方式对创建出来的进
 4.如果用户指定了-it参数，就需要把当前进程的输入输出导入到标准输入输出上
 */
 func NewParentProcess(tty bool, command string) *exec.Cmd {
+	log.Infof("NewParentProcess command: %s", command)
+
 	args := []string{"init", command}
 	cmd := exec.Command("/proc/self/exe", args...)
 	cmd.SysProcAttr = &syscall.SysProcAttr{
