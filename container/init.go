@@ -16,8 +16,8 @@ import (
 func RunContainerInitProcess(command string, args []string) error {
 	log.Infof(" RunContainerInitProcess command %s", command)
 
-	// systemd 加入linux之后，mount namespace就变成 shared by default, 苏哟i必须显示申明
-	// 要这个心的mount namespace独立。
+	// systemd 加入linux之后，mount namespace就变成 shared by default, 所以必须显示申明
+	// 要这个新的mount namespace独立。
 	if err := syscall.Mount("", "/", "", syscall.MS_PRIVATE|syscall.MS_REC, ""); err != nil {
 		log.Errorf("mount / fails: %v", err)
 		return err
