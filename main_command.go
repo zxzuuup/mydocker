@@ -52,7 +52,7 @@ var runCommand = cli.Command{
 			CpuSet:      context.String("cpuset"),
 			CpuShare:    context.String("cpushare"),
 		}
-		log.Info("resConf: %v", resConf)
+		log.Infof("resConf: %v", resConf)
 		Run(tty, cmdArray, resConf)
 		return nil
 	},
@@ -68,8 +68,6 @@ var initCommand = cli.Command{
 	*/
 	Action: func(context *cli.Context) error {
 		log.Info("init command.")
-		cmd := context.Args().Get(0)
-		log.Infof("command %s", cmd)
 		err := container.RunContainerInitProcess()
 		return err
 	},
