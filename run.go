@@ -2,8 +2,11 @@ package main
 
 import (
 	log "github.com/sirupsen/logrus"
+	"mydocker/cgroups"
+	"mydocker/cgroups/subsystems"
 	"mydocker/container"
 	"os"
+	"strings"
 )
 
 // Run 执行具体 command
@@ -13,11 +16,32 @@ import (
 去初始化容器的一些资源。
 */
 
-func Run(tty bool, command string) {
-	parent := container.NewParentProcess(tty, command)
+func Run(tty bool, comArray []string, res *subsystems.ResourceConfig) {
+	parent, writePipe := container.NewParentProcess(tty)
 	if err := parent.Start(); err != nil {
 		log.Error(err)
 	}
+	// 创建cgroup manager, 并通过调用set和apply设置资源限制并使限制在容器上生效
+	cgroupManager := cgroups.NewCgroupManager("mydocker-cgroup")
+
+	defer func(cgroupManager *cgroups.CgroupManager) {
+		err := cgroupManager.Destroy()
+		if err != nil {
+			log.Error("destroy cgroup failed, err:%v", err)
+		}
+	}(cgroupManager)
+
+	_ = cgroupManager.Set(res)
+	_ = cgroupManager.Apply(parent.Process.Pid, res)
+	sendInitCommand(comArray, writePipe)
 	_ = parent.Wait()
 	os.Exit(-1)
+}
+
+// sendInitCommand 通过writePipe将指令发送给子进程
+func sendInitCommand(comArray []string, writePipe *os.File) {
+	command := strings.Join(comArray, " ")
+	log.Infof("Command is %s", command)
+	_, _ = writePipe.WriteString(command)
+	_ = writePipe.Close()
 }
