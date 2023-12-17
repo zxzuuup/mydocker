@@ -19,7 +19,8 @@ var runCommand = cli.Command{
 			Usage: "enable tty",
 		},
 		cli.StringFlag{
-			Name:  "mem", // 为了避免和 stress 命令的 -m 参数冲突 这里使用 -mem,到时候可以看下解决冲突的方法
+			// 为了避免和 stress 命令的 -m 参数冲突 这里使用 -mem,到时候可以看下解决冲突的方法
+			Name:  "mem",
 			Usage: "memory limit",
 		},
 		cli.StringFlag{
@@ -52,7 +53,7 @@ var runCommand = cli.Command{
 			CpuSet:      context.String("cpuset"),
 			CpuShare:    context.String("cpushare"),
 		}
-		log.Infof("resConf: %v", resConf)
+		log.Infof("resConf: %v", *resConf)
 		Run(tty, cmdArray, resConf)
 		return nil
 	},

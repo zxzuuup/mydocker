@@ -27,7 +27,7 @@ func Run(tty bool, comArray []string, res *subsystems.ResourceConfig) {
 	defer func(cgroupManager *cgroups.CgroupManager) {
 		err := cgroupManager.Destroy()
 		if err != nil {
-			log.Error("destroy cgroup failed, err:%v", err)
+			log.Errorf("destroy cgroup failed, err:%v", err)
 		}
 	}(cgroupManager)
 
