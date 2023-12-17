@@ -25,6 +25,14 @@ func RunContainerInitProcess() error {
 	if len(cmdArray) == 0 {
 		return errors.New("run container get user command error, cmdArray is nil")
 	}
+
+	// systemd 加入linux之后，mount namespace就变成 shared by default, 所以必须显示申明
+	// 要这个新的mount namespace独立。
+	err := syscall.Mount("", "/", "", syscall.MS_PRIVATE|syscall.MS_REC, "")
+	if err != nil {
+		log.Errorf("[RunContainerInitProcess] mount / fails: %v", err)
+	}
+
 	// 挂载文件系统
 	setUpMount()
 
@@ -32,7 +40,7 @@ func RunContainerInitProcess() error {
 	command, err := exec.LookPath(cmdArray[0])
 	log.Infof("RunContainerInitProcess command: %s", command)
 	if err = syscall.Exec(command, cmdArray[0:], os.Environ()); err != nil {
-		log.Errorf("RunContainerInitProcess exec :" + err.Error())
+		log.Errorf("RunContainerInitProcess exec :　%v", err)
 	}
 	return nil
 }
@@ -75,18 +83,13 @@ Init 挂载点
 func setUpMount() {
 	pwd, err := os.Getwd()
 	if err != nil {
-		log.Errorf("Get current location error %v", err)
+		log.Errorf("[setUpMount] Get current location error %v", err)
 		return
 	}
 	log.Infof("[setUpMount] Current location is %s", pwd)
 	if err = pivotRoot(pwd); err != nil {
-		log.Errorf("pivotRoot error %v", err)
-	}
-	// systemd 加入linux之后，mount namespace就变成 shared by default, 所以必须显示申明
-	// 要这个新的mount namespace独立。
-	err = syscall.Mount("", "/", "", syscall.MS_PRIVATE|syscall.MS_REC, "")
-	if err != nil {
-		log.Errorf("[setUpMount] mount / fails: %v", err)
+		log.Errorf("[setUpMount] pivotRoot error %v", err)
+		return
 	}
 
 	defaultMountFlags := syscall.MS_NOEXEC | syscall.MS_NOSUID | syscall.MS_NODEV
@@ -94,11 +97,13 @@ func setUpMount() {
 	err = syscall.Mount("proc", "/proc", "proc", uintptr(defaultMountFlags), "")
 	if err != nil {
 		log.Errorf("[setUpMount] mount proc error %v", err)
+		return
 	}
 
 	err = syscall.Mount("tmpfs", "/dev", "tmpfs", syscall.MS_NOSUID|syscall.MS_STRICTATIME, "mode=755")
 	if err != nil {
 		log.Errorf("[setUpMount] mount tmpfs error %v", err)
+		return
 	}
 }
 
@@ -133,5 +138,8 @@ func pivotRoot(root string) error {
 		return fmt.Errorf("[pivotRoot] unmount pivot_root dir %v", err)
 	}
 	// 删除临时文件夹
-	return os.Remove(pivotDir)
+	if err := os.Remove(pivotDir); err != nil {
+		return fmt.Errorf("[pivotRoot] remove %s failed, err:%v", err, nil)
+	}
+	return nil
 }
