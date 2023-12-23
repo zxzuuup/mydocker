@@ -35,6 +35,7 @@ func Run(tty bool, comArray []string, res *subsystems.ResourceConfig) {
 	_ = cgroupManager.Apply(parent.Process.Pid, res)
 	sendInitCommand(comArray, writePipe)
 	_ = parent.Wait()
+	container.DeleteWorkSpace("/root/", "/root/merged/")
 	os.Exit(-1)
 }
 
