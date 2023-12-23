@@ -39,6 +39,11 @@ func NewParentProcess(tty bool) (*exec.Cmd, *os.File) {
 		cmd.Stderr = os.Stderr
 	}
 	cmd.ExtraFiles = []*os.File{readPipe}
-	cmd.Dir = "/root/busybox"
+	// 这个方法给创建出来的子进程指定容器初始化后的工作目录，然后就会运行全面将的那些进程，
+	// 挂载rootfs然后把当前目录虚拟成根目录。
+	mntURL := "/root/merged/"
+	rootURL := "/root"
+	NewWorkSpace(rootURL, mntURL)
+	cmd.Dir = mntURL
 	return cmd, writePile
 }
