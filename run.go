@@ -16,8 +16,8 @@ import (
 去初始化容器的一些资源。
 */
 
-func Run(tty bool, comArray []string, res *subsystems.ResourceConfig) {
-	parent, writePipe := container.NewParentProcess(tty)
+func Run(tty bool, comArray []string, res *subsystems.ResourceConfig, volume string) {
+	parent, writePipe := container.NewParentProcess(tty, volume)
 	if err := parent.Start(); err != nil {
 		log.Error(err)
 	}
@@ -35,7 +35,7 @@ func Run(tty bool, comArray []string, res *subsystems.ResourceConfig) {
 	_ = cgroupManager.Apply(parent.Process.Pid, res)
 	sendInitCommand(comArray, writePipe)
 	_ = parent.Wait()
-	container.DeleteWorkSpace("/root/", "/root/merged/")
+	container.DeleteWorkSpace("/root/", "/root/merged/", volume)
 	os.Exit(-1)
 }
 

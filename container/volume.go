@@ -4,6 +4,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"os"
 	"os/exec"
+	"strings"
 )
 
 /*
@@ -11,10 +12,20 @@ import (
 */
 
 // NewWorkSpace Create an Overlay2 filesystem as container root workspace
-func NewWorkSpace(rootURL string, mntURL string) {
+func NewWorkSpace(rootURL string, mntURL string, volume string) {
 	createLower(rootURL)
 	createDirs(rootURL)
 	mountOverlayFS(rootURL, mntURL)
+	if volume != "" {
+		volumeURLs := volumeUrlExtract(volume)
+		if len(volumeURLs) == 2 && volumeURLs[0] != "" && volume[1] != "" {
+			mountVolume(rootURL, mntURL, volumeURLs)
+			log.Infof("[NewWorkSpace] volumeURL:%q", volumeURLs)
+		} else {
+			log.Infof("[NewWorkSpace] volume parameter input is not correct.")
+		}
+
+	}
 }
 
 // createLower 将busybox作为overlayfs的lower层
@@ -69,7 +80,15 @@ func mountOverlayFS(rootURL string, mntURL string) {
 }
 
 // DeleteWorkSpace Delete the AUFS filesystem while container exit
-func DeleteWorkSpace(rootURL string, mntURL string) {
+func DeleteWorkSpace(rootURL string, mntURL string, volume string) {
+	// 如果指定了volume则需要先umount volume
+	if volume != "" {
+		volumeURLs := volumeUrlExtract(volume)
+		length := len(volumeURLs)
+		if length == 2 && volumeURLs[0] != "" && volumeURLs[1] != "" {
+			umountVolume(mntURL, volumeURLs)
+		}
+	}
 	umountOverlayFS(mntURL)
 	deleteDirs(rootURL)
 }
@@ -107,4 +126,45 @@ func pathExists(path string) (bool, error) {
 		return false, nil
 	}
 	return false, err
+}
+
+// volumeUrlExtract 通过冒号分割解析volume目录，比如 -v /tmp:/tmp
+func volumeUrlExtract(volume string) []string {
+	var volumeURLs []string
+	volumeURLs = strings.Split(volume, ":")
+	return volumeURLs
+}
+
+func mountVolume(rootURL string, mntURL string, volumeURLs []string) {
+	// 第0个元素为宿主机目录
+	parentUrl := volumeURLs[0]
+	if err := os.Mkdir(parentUrl, 0777); err != nil {
+		log.Infof("[mountVolume] mkdir parent dir %s error. %v", parentUrl, err)
+	}
+	// 第1个元素为容器目录
+	containerUrl := volumeURLs[1]
+	// 拼接并创建对应的容器目录
+	containerVolumeURL := mntURL + containerUrl
+	if err := os.Mkdir(containerVolumeURL, 0777); err != nil {
+		log.Infof("[mountVolume] mkdir container dir %s error. %v", containerVolumeURL, err)
+	}
+	// 通过bind mount 将宿主机目录挂载到容器目录
+	// mount -o bind /hostURL /containerURL
+	cmd := exec.Command("mount", "-o", "bind", parentUrl, containerVolumeURL)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		log.Errorf("[mountVolume] mount volume failed. %v", err)
+	}
+}
+
+func umountVolume(mntURL string, volumeURLs []string) {
+	// 卸载容器里volume挂载点的文件系统
+	containerURL := mntURL + volumeURLs[1]
+	cmd := exec.Command("umount", containerURL)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		log.Errorf("Umount volume faied. %v", err)
+	}
 }

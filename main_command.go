@@ -31,6 +31,10 @@ var runCommand = cli.Command{
 			Name:  "cpuset",
 			Usage: "cpuset limit",
 		},
+		cli.StringFlag{
+			Name:  "v",
+			Usage: "volume",
+		},
 	},
 	/*
 		这里是run命令执行的真正函数。
@@ -53,8 +57,9 @@ var runCommand = cli.Command{
 			CpuSet:      context.String("cpuset"),
 			CpuShare:    context.String("cpushare"),
 		}
-		log.Infof("resConf: %v", *resConf)
-		Run(tty, cmdArray, resConf)
+		volume := context.String("v")
+		log.Infof("resConf: %v, volume: %s", *resConf, volume)
+		Run(tty, cmdArray, resConf, volume)
 		return nil
 	},
 }
