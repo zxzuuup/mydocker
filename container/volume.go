@@ -18,7 +18,7 @@ func NewWorkSpace(rootURL string, mntURL string, volume string) {
 	mountOverlayFS(rootURL, mntURL)
 	if volume != "" {
 		volumeURLs := volumeUrlExtract(volume)
-		if len(volumeURLs) == 2 && volumeURLs[0] != "" && volume[1] != "" {
+		if len(volumeURLs) == 2 && volumeURLs[0] != "" && volumeURLs[1] != "" {
 			mountVolume(rootURL, mntURL, volumeURLs)
 			log.Infof("[NewWorkSpace] volumeURL:%q", volumeURLs)
 		} else {
